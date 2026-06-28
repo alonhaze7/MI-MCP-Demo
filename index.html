@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MI Data Pipelines — MCP Interactive Demo</title>
+  <title>MI Data Pipelines — MCP Demo</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
@@ -13,130 +13,254 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="6" fill="#6B4FBB"/>
-            <path d="M7 8h10M7 12h7M7 16h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
-          </svg>
+          <div class="claude-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" fill="#D4A574"/>
+              <circle cx="8.5" cy="10" r="1.2" fill="#2D1B00"/>
+              <circle cx="15.5" cy="10" r="1.2" fill="#2D1B00"/>
+            </svg>
+          </div>
           <span class="logo-text">Claude</span>
         </div>
-        <button class="new-chat-btn">+ New Chat</button>
       </div>
-      <div class="sidebar-section">
-        <div class="section-label">Use Cases</div>
-        <nav class="scenario-list">
-          <button class="scenario-btn active" data-scenario="discovery">
-            <span class="scenario-icon">🔍</span>
-            <span class="scenario-label">Discovery & Fix</span>
+
+      <div class="sidebar-nav">
+        <div class="nav-section-title">Scenarios</div>
+        <nav class="scenario-list" id="scenarioList">
+          <button class="scenario-btn" data-scenario="discovery">
+            <span class="scenario-num">1</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Discovery & Fix</span>
+              <span class="scenario-desc">Meta spend → zero</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="connector">
-            <span class="scenario-icon">🔗</span>
-            <span class="scenario-label">Set Up Connector</span>
+            <span class="scenario-num">2</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Set Up Connector</span>
+              <span class="scenario-desc">LinkedIn Ads</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="orphans">
-            <span class="scenario-icon">👻</span>
-            <span class="scenario-label">Find Orphans</span>
+            <span class="scenario-num">3</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Find Orphans</span>
+              <span class="scenario-desc">Idle connections</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="reprocess">
-            <span class="scenario-icon">🔄</span>
-            <span class="scenario-label">Reprocess Data</span>
+            <span class="scenario-num">4</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Reprocess Data</span>
+              <span class="scenario-desc">Attribution fix</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="backfill">
-            <span class="scenario-icon">📥</span>
-            <span class="scenario-label">Backfill History</span>
+            <span class="scenario-num">5</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Backfill History</span>
+              <span class="scenario-desc">90-day load</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="prevention">
-            <span class="scenario-icon">🛡️</span>
-            <span class="scenario-label">Break Prevention</span>
+            <span class="scenario-num">6</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Break Prevention</span>
+              <span class="scenario-desc">Proactive scan</span>
+            </div>
           </button>
           <button class="scenario-btn" data-scenario="duplicates">
-            <span class="scenario-icon">⚠️</span>
-            <span class="scenario-label">Duplicate Detection</span>
+            <span class="scenario-num">7</span>
+            <div class="scenario-info">
+              <span class="scenario-label">Duplicate Detection</span>
+              <span class="scenario-desc">Double-count fix</span>
+            </div>
           </button>
         </nav>
       </div>
-      <div class="sidebar-section">
-        <div class="section-label">MCP Tools Used</div>
-        <div class="tools-panel" id="toolsPanel">
-          <div class="tool-tag">Select a use case</div>
+
+      <div class="sidebar-footer">
+        <div class="mcp-badge">
+          <span class="mcp-dot"></span>
+          <span class="mcp-label">MCP: mi_datapipelines</span>
         </div>
+        <div class="mcp-tools-count">50 tools registered</div>
       </div>
     </aside>
 
-    <!-- Main Chat Area -->
-    <main class="chat-area">
-      <div class="chat-header">
-        <div class="chat-header-left">
-          <h1 class="chat-title">MI Data Pipelines Assistant</h1>
-          <span class="model-badge">Claude + MCP</span>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Step Control Bar -->
+      <div class="step-bar" id="stepBar">
+        <div class="step-bar-left">
+          <span class="step-counter" id="stepCounter"></span>
+          <span class="step-description" id="stepDescription">Select a scenario to begin</span>
         </div>
-        <div class="chat-header-right">
-          <span class="connection-status">
-            <span class="status-dot"></span>
-            MCP Connected — 50 tools
-          </span>
-        </div>
-      </div>
-
-      <div class="messages-container" id="messagesContainer">
-        <div class="welcome-screen" id="welcomeScreen">
-          <div class="welcome-icon">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="12" fill="#6B4FBB" opacity="0.1"/>
-              <path d="M14 16h20M14 24h14M14 32h20" stroke="#6B4FBB" stroke-width="3" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h2>MI Data Pipelines MCP Demo</h2>
-          <p>Experience how an AI agent manages data pipelines end-to-end using natural language. Select a use case from the sidebar or type a request below.</p>
-          <div class="welcome-cards">
-            <button class="welcome-card" data-scenario="discovery">
-              <span class="card-icon">🔍</span>
-              <span class="card-title">Find & fix a data issue</span>
-              <span class="card-desc">Detect why spend dropped to zero</span>
-            </button>
-            <button class="welcome-card" data-scenario="connector">
-              <span class="card-icon">🔗</span>
-              <span class="card-title">Connect a new source</span>
-              <span class="card-desc">Set up LinkedIn Ads in minutes</span>
-            </button>
-            <button class="welcome-card" data-scenario="prevention">
-              <span class="card-icon">🛡️</span>
-              <span class="card-title">Prevent upcoming breaks</span>
-              <span class="card-desc">Proactive risk detection</span>
-            </button>
-            <button class="welcome-card" data-scenario="duplicates">
-              <span class="card-icon">⚠️</span>
-              <span class="card-title">Detect double-counting</span>
-              <span class="card-desc">Find silent duplication</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Input Area -->
-      <div class="input-area">
-        <div class="input-wrapper">
-          <textarea id="userInput" placeholder="Ask about your data pipelines..." rows="1"></textarea>
-          <button class="send-btn" id="sendBtn">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 10h14M12 5l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+        <div class="step-bar-right">
+          <button class="step-btn" id="prevBtn" disabled>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Prev
           </button>
+          <button class="step-btn primary" id="nextBtn" disabled>
+            Next
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="step-divider"></div>
+          <button class="step-btn" id="autoPlayBtn" disabled>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 1.5l9 5.5-9 5.5V1.5z" fill="currentColor"/></svg>
+            Auto
+          </button>
+          <button class="step-btn" id="resetBtn" disabled>Reset</button>
         </div>
-        <div class="input-footer">
-          <span class="disclaimer">Interactive demo — simulated responses showing MCP tool orchestration</span>
+      </div>
+
+      <!-- Chat Area -->
+      <div class="chat-wrapper">
+        <div class="chat-container" id="chatContainer">
+          <!-- Welcome / Landing -->
+          <div class="welcome" id="welcomeScreen">
+            <div class="welcome-badge">MI Data Pipelines MCP</div>
+            <h1>Interactive Demo</h1>
+            <p>See how an AI assistant manages data pipelines end-to-end using natural language — step by step.</p>
+            <div class="welcome-grid">
+              <button class="welcome-card" data-scenario="discovery">
+                <div class="wc-header">
+                  <span class="wc-num">1</span>
+                  <span class="wc-tools">9 tool calls</span>
+                </div>
+                <div class="wc-title">Discovery & Fix</div>
+                <div class="wc-prompt">"Acme's Meta spend dropped to zero on Monday. Find out why and fix it."</div>
+              </button>
+              <button class="welcome-card" data-scenario="connector">
+                <div class="wc-header">
+                  <span class="wc-num">2</span>
+                  <span class="wc-tools">10 tool calls</span>
+                </div>
+                <div class="wc-title">Set Up Connector</div>
+                <div class="wc-prompt">"Connect our LinkedIn Ads account to the Acme workspace and start pulling daily."</div>
+              </button>
+              <button class="welcome-card" data-scenario="prevention">
+                <div class="wc-header">
+                  <span class="wc-num">6</span>
+                  <span class="wc-tools">5 tool calls</span>
+                </div>
+                <div class="wc-title">Break Prevention</div>
+                <div class="wc-prompt">"What's going to break in the next 7 days?"</div>
+              </button>
+              <button class="welcome-card" data-scenario="duplicates">
+                <div class="wc-header">
+                  <span class="wc-num">7</span>
+                  <span class="wc-tools">6 tool calls</span>
+                </div>
+                <div class="wc-title">Duplicate Detection</div>
+                <div class="wc-prompt">"Does anything look double-counted?"</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages will be rendered here -->
+        </div>
+
+        <!-- Fake Input Bar (decorative) -->
+        <div class="input-bar">
+          <div class="input-box">
+            <textarea id="fakeInput" placeholder="Ask about your data pipelines..." rows="1" readonly></textarea>
+            <button class="input-send" disabled>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="input-hint">Use the step controls above or select a scenario to navigate the demo</div>
         </div>
       </div>
     </main>
 
-    <!-- Right Panel (Tool Execution) -->
-    <aside class="right-panel" id="rightPanel">
-      <div class="panel-header">
-        <h3>Tool Execution Log</h3>
-        <button class="panel-close" id="panelClose">×</button>
+    <!-- Right Panel: Prompt Inspector -->
+    <aside class="inspector" id="inspector">
+      <div class="inspector-tabs">
+        <button class="inspector-tab active" data-tab="prompt">Prompt</button>
+        <button class="inspector-tab" data-tab="context">Context</button>
+        <button class="inspector-tab" data-tab="tools">Tools</button>
       </div>
-      <div class="panel-content" id="panelContent">
-        <div class="panel-empty">
-          <p>Tool calls will appear here as the agent works through the scenario.</p>
+
+      <div class="inspector-body">
+        <!-- Prompt Tab -->
+        <div class="inspector-pane active" id="promptPane">
+          <div class="inspector-section">
+            <div class="inspector-section-header">
+              <span class="section-dot system"></span>
+              System Prompt
+            </div>
+            <pre class="code-block" id="systemPromptBlock">You are a Marketing Intelligence assistant with
+access to MI Data Pipelines MCP tools.
+
+You help marketers manage their data pipelines
+using natural language. When investigating issues:
+
+1. Start with discovery (list pipelines, check status)
+2. Diagnose using logs, mappings, and connector info
+3. Propose a fix with clear explanation
+4. Only execute mutations after user confirmation
+
+Always explain your reasoning before acting.
+Prefer non-destructive operations when possible.</pre>
+          </div>
+          <div class="inspector-section">
+            <div class="inspector-section-header">
+              <span class="section-dot user"></span>
+              <span id="promptUserLabel">User Message</span>
+            </div>
+            <pre class="code-block user-prompt" id="userPromptBlock">Select a scenario to see the prompt...</pre>
+          </div>
+          <div class="inspector-section" id="thinkingSection" style="display:none">
+            <div class="inspector-section-header">
+              <span class="section-dot thinking"></span>
+              Agent Thinking
+            </div>
+            <pre class="code-block thinking-block" id="thinkingBlock"></pre>
+          </div>
+        </div>
+
+        <!-- Context Tab -->
+        <div class="inspector-pane" id="contextPane">
+          <div class="inspector-section">
+            <div class="inspector-section-header">MCP Server Configuration</div>
+            <pre class="code-block">{
+  "mcpServers": {
+    "mi_datapipelines": {
+      "type": "openapi",
+      "spec": "mi_datapipelines.yaml",
+      "baseUrl": "${EMI_BASE_URL}",
+      "auth": "bearer ${ACCESS_TOKEN}",
+      "tools": 50
+    }
+  }
+}</pre>
+          </div>
+          <div class="inspector-section">
+            <div class="inspector-section-header">Tool Categories</div>
+            <div class="category-list">
+              <div class="category-item"><span class="cat-count">6</span> Pipeline CRUD</div>
+              <div class="category-item"><span class="cat-count">5</span> Execution & Monitoring</div>
+              <div class="category-item"><span class="cat-count">2</span> Scheduling</div>
+              <div class="category-item"><span class="cat-count">3</span> Entities & Attributes</div>
+              <div class="category-item"><span class="cat-count">5</span> Connectors</div>
+              <div class="category-item"><span class="cat-count">8</span> TotalConnect / SFDrive</div>
+              <div class="category-item"><span class="cat-count">4</span> Data Lake Objects</div>
+              <div class="category-item"><span class="cat-count">8</span> Mapping & Transform</div>
+              <div class="category-item"><span class="cat-count">8</span> OAuth & Connections</div>
+              <div class="category-item"><span class="cat-count">1</span> Context</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div class="inspector-pane" id="toolsPane">
+          <div class="inspector-section">
+            <div class="inspector-section-header">Tools Called in This Scenario</div>
+            <div class="tools-timeline" id="toolsTimeline">
+              <div class="timeline-empty">No tools called yet</div>
+            </div>
+          </div>
         </div>
       </div>
     </aside>

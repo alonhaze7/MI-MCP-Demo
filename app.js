@@ -1,379 +1,406 @@
-// MI Data Pipelines MCP Demo — Application Logic
+// MI Data Pipelines MCP Demo — Step-by-Step Interactive App
+// Note: All content rendered is static/hardcoded demo data — no user input is rendered unsanitized.
 
+let currentScenarioKey = null;
 let currentScenario = null;
-let isPlaying = false;
-let stepIndex = 0;
+let visibleStepIndex = -1;
+let totalSteps = 0;
+let autoPlaying = false;
+let autoPlayTimer = null;
 
-// DOM Elements
-const messagesContainer = document.getElementById('messagesContainer');
+// DOM refs
+const chatContainer = document.getElementById('chatContainer');
 const welcomeScreen = document.getElementById('welcomeScreen');
-const toolsPanel = document.getElementById('toolsPanel');
-const panelContent = document.getElementById('panelContent');
-const rightPanel = document.getElementById('rightPanel');
-const userInput = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
+const stepCounter = document.getElementById('stepCounter');
+const stepDescription = document.getElementById('stepDescription');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const autoPlayBtn = document.getElementById('autoPlayBtn');
+const resetBtn = document.getElementById('resetBtn');
+const userPromptBlock = document.getElementById('userPromptBlock');
+const thinkingSection = document.getElementById('thinkingSection');
+const thinkingBlock = document.getElementById('thinkingBlock');
+const toolsTimeline = document.getElementById('toolsTimeline');
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  // Scenario buttons (sidebar)
-  document.querySelectorAll('.scenario-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const scenario = btn.dataset.scenario;
-      startScenario(scenario);
-    });
+document.addEventListener('DOMContentLoaded', function() {
+  // Sidebar scenarios
+  document.querySelectorAll('.scenario-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { loadScenario(btn.dataset.scenario); });
   });
-
   // Welcome cards
-  document.querySelectorAll('.welcome-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const scenario = card.dataset.scenario;
-      startScenario(scenario);
-    });
+  document.querySelectorAll('.welcome-card').forEach(function(card) {
+    card.addEventListener('click', function() { loadScenario(card.dataset.scenario); });
   });
-
-  // Send button
-  sendBtn.addEventListener('click', handleSend);
-  userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  // Step controls
+  nextBtn.addEventListener('click', nextStep);
+  prevBtn.addEventListener('click', prevStep);
+  autoPlayBtn.addEventListener('click', toggleAutoPlay);
+  resetBtn.addEventListener('click', resetScenario);
+  // Inspector tabs
+  document.querySelectorAll('.inspector-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() { switchInspectorTab(tab.dataset.tab); });
   });
-
-  // Panel close
-  document.getElementById('panelClose').addEventListener('click', () => {
-    rightPanel.classList.toggle('hidden');
-  });
-
-  // Auto-resize textarea
-  userInput.addEventListener('input', () => {
-    userInput.style.height = 'auto';
-    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextStep(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep(); }
   });
 });
 
-function handleSend() {
-  const text = userInput.value.trim();
-  if (!text) return;
+// --- Scenario Loading ---
 
-  // Try to match to a scenario
-  const matchedScenario = matchScenario(text);
-  if (matchedScenario) {
-    userInput.value = '';
-    userInput.style.height = 'auto';
-    startScenario(matchedScenario);
-  } else {
-    // Generic response for unmatched input
-    userInput.value = '';
-    userInput.style.height = 'auto';
-    hideWelcome();
-    addMessage('user', text);
-    setTimeout(() => {
-      addMessage('assistant', `<p>I can help with that! In this demo, try one of these scenarios:</p>
-        <p>• "Acme's Meta spend dropped to zero" — Discovery & Fix<br>
-        • "Connect LinkedIn Ads to Acme" — Set Up Connector<br>
-        • "Are any connections not feeding data?" — Find Orphans<br>
-        • "Refresh the last 7 days" — Reprocess Data<br>
-        • "Backfill 90 days for Initech" — Backfill History<br>
-        • "What's going to break?" — Break Prevention<br>
-        • "Does anything look double-counted?" — Duplicate Detection</p>
-        <p>Or click a use case in the sidebar to see the full interactive walkthrough.</p>`);
-    }, 500);
-  }
-}
-
-function matchScenario(text) {
-  const lower = text.toLowerCase();
-  if (lower.includes('spend') || lower.includes('dropped') || lower.includes('zero') || lower.includes('deviation')) return 'discovery';
-  if (lower.includes('connect') || lower.includes('linkedin') || lower.includes('set up')) return 'connector';
-  if (lower.includes('orphan') || lower.includes('not feeding') || lower.includes('not wired')) return 'orphans';
-  if (lower.includes('stale') || lower.includes('refresh') || lower.includes('reprocess') || lower.includes('attribution')) return 'reprocess';
-  if (lower.includes('backfill') || lower.includes('history') || lower.includes('90 days')) return 'backfill';
-  if (lower.includes('break') || lower.includes('prevention') || lower.includes('expire') || lower.includes('going to')) return 'prevention';
-  if (lower.includes('double') || lower.includes('duplicate') || lower.includes('overlap')) return 'duplicates';
-  return null;
-}
-
-function startScenario(scenarioKey) {
-  if (isPlaying) return;
-
-  currentScenario = SCENARIOS[scenarioKey];
+function loadScenario(key) {
+  stopAutoPlay();
+  currentScenarioKey = key;
+  currentScenario = SCENARIOS[key];
   if (!currentScenario) return;
 
-  // Update sidebar active state
-  document.querySelectorAll('.scenario-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.scenario === scenarioKey);
+  currentScenario._flatSteps = buildFlatSteps(currentScenario);
+  totalSteps = currentScenario._flatSteps.length;
+  visibleStepIndex = -1;
+
+  document.querySelectorAll('.scenario-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.scenario === key);
   });
 
-  // Reset state
-  isPlaying = true;
-  stepIndex = 0;
-  hideWelcome();
-  clearMessages();
-  clearPanel();
-  updateToolsPanel(currentScenario.tools);
+  userPromptBlock.textContent = currentScenario.userMessage;
+  thinkingSection.style.display = 'none';
+  toolsTimeline.textContent = '';
+  var emptyMsg = document.createElement('div');
+  emptyMsg.className = 'timeline-empty';
+  emptyMsg.textContent = 'Click "Next" to step through';
+  toolsTimeline.appendChild(emptyMsg);
 
-  // Show user message
-  addMessage('user', currentScenario.userMessage);
+  nextBtn.disabled = false;
+  autoPlayBtn.disabled = false;
+  resetBtn.disabled = false;
+  prevBtn.disabled = true;
 
-  // Start playing steps after a brief delay
-  setTimeout(() => playSteps(currentScenario.steps), 800);
+  welcomeScreen.style.display = 'none';
+  renderChat();
+  updateStepBar();
 }
 
-function hideWelcome() {
-  if (welcomeScreen) {
-    welcomeScreen.style.display = 'none';
-  }
-}
+function buildFlatSteps(scenario) {
+  var flat = [];
+  flat.push({ type: 'user', content: scenario.userMessage, description: 'User sends request' });
 
-function clearMessages() {
-  // Remove all messages but keep welcome (hidden)
-  const messages = messagesContainer.querySelectorAll('.message, .typing-wrapper');
-  messages.forEach(m => m.remove());
-}
-
-function clearPanel() {
-  panelContent.innerHTML = '<div class="panel-empty"><p>Tool calls will appear here as the agent works...</p></div>';
-}
-
-function updateToolsPanel(tools) {
-  toolsPanel.innerHTML = tools.map(t =>
-    `<span class="tool-tag" data-tool="${t}">${t}</span>`
-  ).join('');
-}
-
-function markToolCalled(toolName) {
-  const tag = toolsPanel.querySelector(`[data-tool="${toolName}"]`);
-  if (tag) {
-    tag.classList.add('called');
-  }
-}
-
-async function playSteps(steps) {
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-
+  for (var s = 0; s < scenario.steps.length; s++) {
+    var step = scenario.steps[s];
     if (step.type === 'thinking') {
-      await showThinking(step.content);
+      flat.push({ type: 'thinking', content: step.content, description: 'Agent reasoning' });
     } else if (step.type === 'tool') {
-      await showToolCall(step);
+      flat.push({ type: 'tool', name: step.name, params: step.params, result: step.result, status: step.status, description: 'Tool: ' + step.name });
     } else if (step.type === 'response') {
-      await showResponse(step.content);
+      flat.push({ type: 'response', content: step.content, description: 'Agent response' });
     } else if (step.type === 'approval_response') {
-      // This will be triggered by the approval button
-      window._pendingApproval = step;
-      isPlaying = false;
-      return;
+      flat.push({ type: 'approval', description: 'User approves action' });
+      for (var a = 0; a < step.steps.length; a++) {
+        var sub = step.steps[a];
+        if (sub.type === 'tool') {
+          flat.push({ type: 'tool', name: sub.name, params: sub.params, result: sub.result, status: sub.status, description: 'Tool: ' + sub.name });
+        }
+      }
+      flat.push({ type: 'final_response', content: step.finalResponse, description: 'Final result' });
     }
-
-    await delay(300);
   }
-
-  isPlaying = false;
+  return flat;
 }
 
-function showThinking(content) {
-  return new Promise(resolve => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'message assistant';
-    wrapper.innerHTML = `
-      <div class="message-avatar">🤖</div>
-      <div class="message-content">
-        <div class="typing-indicator">
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-        </div>
-      </div>
-    `;
-    messagesContainer.appendChild(wrapper);
-    scrollToBottom();
+// --- Step Navigation ---
 
-    setTimeout(() => {
-      wrapper.querySelector('.message-content').innerHTML = `<p style="color: var(--text-muted); font-style: italic; font-size: 13px;">💭 ${content}</p>`;
-      scrollToBottom();
-      resolve();
-    }, 1200);
-  });
+function nextStep() {
+  if (!currentScenario || visibleStepIndex >= totalSteps - 1) return;
+  visibleStepIndex++;
+  renderChat();
+  updateStepBar();
+  updateInspector();
+  prevBtn.disabled = visibleStepIndex <= 0;
+  nextBtn.disabled = visibleStepIndex >= totalSteps - 1;
+  if (visibleStepIndex >= totalSteps - 1) stopAutoPlay();
 }
 
-function showToolCall(step) {
-  return new Promise(resolve => {
-    // Add to right panel
-    addToolLogEntry(step.name, step.params, 'running');
-
-    // Add inline tool call
-    const toolBlock = document.createElement('div');
-    toolBlock.className = 'message assistant';
-    toolBlock.innerHTML = `
-      <div class="message-avatar">🤖</div>
-      <div class="message-content">
-        <div class="tool-call">
-          <div class="tool-call-header">
-            <span class="tool-call-icon running">⚙️</span>
-            <span class="tool-call-name">${step.name}</span>
-            <span class="tool-call-status running">running</span>
-          </div>
-          <div class="tool-call-body">${step.params}</div>
-        </div>
-      </div>
-    `;
-    messagesContainer.appendChild(toolBlock);
-    scrollToBottom();
-
-    // Simulate execution time
-    setTimeout(() => {
-      const header = toolBlock.querySelector('.tool-call-header');
-      const status = toolBlock.querySelector('.tool-call-status');
-      const icon = toolBlock.querySelector('.tool-call-icon');
-      const body = toolBlock.querySelector('.tool-call-body');
-
-      icon.classList.remove('running');
-      icon.textContent = '✓';
-      status.classList.remove('running');
-      status.classList.add('success');
-      status.textContent = 'success';
-      body.innerHTML += `\n\n<span style="color: var(--success)">→ Result:</span>\n${step.result}`;
-
-      // Update panel
-      updateToolLogEntry(step.name, 'success');
-      markToolCalled(step.name);
-      scrollToBottom();
-      resolve();
-    }, 1500 + Math.random() * 1000);
-  });
+function prevStep() {
+  if (!currentScenario || visibleStepIndex <= 0) return;
+  visibleStepIndex--;
+  renderChat();
+  updateStepBar();
+  updateInspector();
+  prevBtn.disabled = visibleStepIndex <= 0;
+  nextBtn.disabled = false;
 }
 
-function showResponse(content) {
-  return new Promise(resolve => {
-    // Show typing first
-    const wrapper = document.createElement('div');
-    wrapper.className = 'message assistant';
-    wrapper.innerHTML = `
-      <div class="message-avatar">🤖</div>
-      <div class="message-content">
-        <div class="typing-indicator">
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-        </div>
-      </div>
-    `;
-    messagesContainer.appendChild(wrapper);
-    scrollToBottom();
-
-    setTimeout(() => {
-      wrapper.querySelector('.message-content').innerHTML = content;
-      scrollToBottom();
-      resolve();
-    }, 1000);
-  });
+function resetScenario() {
+  stopAutoPlay();
+  if (currentScenarioKey) loadScenario(currentScenarioKey);
 }
 
-function addMessage(role, content) {
-  const wrapper = document.createElement('div');
-  wrapper.className = `message ${role}`;
-
-  if (role === 'user') {
-    wrapper.innerHTML = `
-      <div class="message-avatar">👤</div>
-      <div class="message-content">${content}</div>
-    `;
+function toggleAutoPlay() {
+  if (autoPlaying) {
+    stopAutoPlay();
   } else {
-    wrapper.innerHTML = `
-      <div class="message-avatar">🤖</div>
-      <div class="message-content">${content}</div>
-    `;
+    autoPlaying = true;
+    autoPlayBtn.textContent = '⏸ Pause';
+    autoAdvance();
   }
-
-  messagesContainer.appendChild(wrapper);
-  scrollToBottom();
 }
 
-function addToolLogEntry(name, params, status) {
-  // Remove empty state
-  const empty = panelContent.querySelector('.panel-empty');
-  if (empty) empty.remove();
-
-  const entry = document.createElement('div');
-  entry.className = `tool-log-entry ${status}`;
-  entry.dataset.tool = name;
-  entry.innerHTML = `
-    <div class="tool-log-name">${status === 'running' ? '⏳' : '✓'} ${name}</div>
-    <div class="tool-log-detail">${params.substring(0, 80)}...</div>
-    <div class="tool-log-time">${new Date().toLocaleTimeString()}</div>
-  `;
-  panelContent.appendChild(entry);
-  panelContent.scrollTop = panelContent.scrollHeight;
+function stopAutoPlay() {
+  autoPlaying = false;
+  if (autoPlayTimer) clearTimeout(autoPlayTimer);
+  autoPlayTimer = null;
+  autoPlayBtn.textContent = '▶ Auto';
 }
 
-function updateToolLogEntry(name, status) {
-  const entries = panelContent.querySelectorAll('.tool-log-entry');
-  for (let i = entries.length - 1; i >= 0; i--) {
-    if (entries[i].dataset.tool === name) {
-      entries[i].classList.remove('running');
-      entries[i].classList.add(status);
-      entries[i].querySelector('.tool-log-name').innerHTML = `✓ ${name}`;
-      break;
+function autoAdvance() {
+  if (!autoPlaying || visibleStepIndex >= totalSteps - 1) { stopAutoPlay(); return; }
+  nextStep();
+  var step = currentScenario._flatSteps[visibleStepIndex];
+  var delay = 1200;
+  if (step.type === 'tool') delay = 2000;
+  if (step.type === 'response' || step.type === 'final_response') delay = 2500;
+  autoPlayTimer = setTimeout(autoAdvance, delay);
+}
+
+function updateStepBar() {
+  if (!currentScenario) {
+    stepCounter.textContent = '';
+    stepDescription.textContent = 'Select a scenario to begin';
+    return;
+  }
+  var current = visibleStepIndex + 1;
+  stepCounter.textContent = current + ' / ' + totalSteps;
+  if (visibleStepIndex >= 0) {
+    stepDescription.textContent = currentScenario._flatSteps[visibleStepIndex].description;
+  } else {
+    stepDescription.textContent = 'Ready — click Next or press →';
+  }
+}
+
+// --- Rendering ---
+
+function renderChat() {
+  var existing = chatContainer.querySelectorAll('.message');
+  existing.forEach(function(el) { el.remove(); });
+
+  if (!currentScenario || visibleStepIndex < 0) return;
+
+  var steps = currentScenario._flatSteps;
+  var toolCallNum = 0;
+
+  for (var i = 0; i <= visibleStepIndex; i++) {
+    var step = steps[i];
+    var el = document.createElement('div');
+    el.className = 'message';
+
+    if (step.type === 'user') {
+      renderUserMessage(el, step.content);
+    } else if (step.type === 'thinking') {
+      renderThinking(el, step.content);
+    } else if (step.type === 'tool') {
+      toolCallNum++;
+      renderToolCall(el, step, toolCallNum, i === visibleStepIndex);
+    } else if (step.type === 'response' || step.type === 'final_response') {
+      renderAssistantResponse(el, step.content);
+    } else if (step.type === 'approval') {
+      renderUserMessage(el, '✓ Approved — go ahead.');
     }
+
+    chatContainer.appendChild(el);
   }
-}
 
-// Handle approval button clicks
-window.handleApproval = async function(scenarioKey) {
-  if (!window._pendingApproval) return;
-
-  const approval = window._pendingApproval;
-  window._pendingApproval = null;
-  isPlaying = true;
-
-  // Disable the buttons
-  const buttons = document.querySelectorAll('.action-btn');
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'default';
+  requestAnimationFrame(function() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
   });
-
-  // Add user approval message
-  addMessage('user', '✓ Approved — go ahead.');
-
-  await delay(500);
-
-  // Play approval steps
-  for (const step of approval.steps) {
-    if (step.type === 'tool') {
-      await showToolCall(step);
-    }
-    await delay(300);
-  }
-
-  // Show final response
-  await showResponse(approval.finalResponse);
-  isPlaying = false;
-};
-
-window.handlePreview = function(scenarioKey) {
-  // Show a preview diff in the panel
-  const diffContent = `<div class="tool-log-entry info">
-    <div class="tool-log-name">📋 Mapping Diff Preview</div>
-    <div class="tool-log-detail" style="white-space:pre; font-family: var(--font-mono);">
-- source: "spend"        → target: "Cost"
-+ source: "amount_spent" → target: "Cost"
-
-No other mappings affected.
-    </div>
-  </div>`;
-
-  const empty = panelContent.querySelector('.panel-empty');
-  if (empty) empty.remove();
-  panelContent.insertAdjacentHTML('beforeend', diffContent);
-};
-
-function scrollToBottom() {
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function renderUserMessage(el, text) {
+  var header = document.createElement('div');
+  header.className = 'msg-header';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar user';
+  avatar.textContent = 'Y';
+  var name = document.createElement('span');
+  name.className = 'msg-name';
+  name.textContent = 'You';
+  header.appendChild(avatar);
+  header.appendChild(name);
+
+  var body = document.createElement('div');
+  body.className = 'msg-body';
+  var p = document.createElement('p');
+  p.textContent = text;
+  body.appendChild(p);
+
+  el.appendChild(header);
+  el.appendChild(body);
+}
+
+function renderThinking(el, text) {
+  var header = document.createElement('div');
+  header.className = 'msg-header';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar assistant';
+  avatar.textContent = '●';
+  avatar.style.color = '#D4A574';
+  avatar.style.fontSize = '16px';
+  var name = document.createElement('span');
+  name.className = 'msg-name';
+  name.textContent = 'Claude';
+  var time = document.createElement('span');
+  time.className = 'msg-time';
+  time.textContent = 'thinking...';
+  header.appendChild(avatar);
+  header.appendChild(name);
+  header.appendChild(time);
+
+  var body = document.createElement('div');
+  body.className = 'msg-body';
+  var block = document.createElement('div');
+  block.className = 'thinking-block-inline';
+  block.textContent = text;
+  body.appendChild(block);
+
+  el.appendChild(header);
+  el.appendChild(body);
+}
+
+function renderToolCall(el, step, num, isLatest) {
+  var header = document.createElement('div');
+  header.className = 'msg-header';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar assistant';
+  avatar.textContent = '●';
+  avatar.style.color = '#D4A574';
+  avatar.style.fontSize = '16px';
+  var name = document.createElement('span');
+  name.className = 'msg-name';
+  name.textContent = 'Claude';
+  var time = document.createElement('span');
+  time.className = 'msg-time';
+  time.textContent = 'tool call #' + num;
+  header.appendChild(avatar);
+  header.appendChild(name);
+  header.appendChild(time);
+
+  var body = document.createElement('div');
+  body.className = 'msg-body';
+
+  var toolBlock = document.createElement('div');
+  toolBlock.className = 'tool-block';
+
+  // Tool header
+  var toolHeader = document.createElement('div');
+  toolHeader.className = 'tool-header';
+  var icon = document.createElement('span');
+  icon.className = isLatest ? 'tool-icon spinning' : 'tool-icon';
+  icon.textContent = isLatest ? '⚙' : '✓';
+  var toolName = document.createElement('span');
+  toolName.className = 'tool-name';
+  toolName.textContent = step.name + '()';
+  var status = document.createElement('span');
+  status.className = 'tool-status ' + (isLatest ? 'running' : 'success');
+  status.textContent = isLatest ? 'executing...' : 'completed';
+  toolHeader.appendChild(icon);
+  toolHeader.appendChild(toolName);
+  toolHeader.appendChild(status);
+
+  // Params
+  var params = document.createElement('div');
+  params.className = 'tool-params';
+  params.textContent = step.params;
+
+  toolBlock.appendChild(toolHeader);
+  toolBlock.appendChild(params);
+
+  // Result (show for completed steps)
+  if (!isLatest) {
+    var result = document.createElement('div');
+    result.className = 'tool-result';
+    var label = document.createElement('span');
+    label.className = 'tool-result-label';
+    label.textContent = '← Response';
+    result.appendChild(label);
+    result.appendChild(document.createTextNode('\n' + step.result));
+    toolBlock.appendChild(result);
+  }
+
+  body.appendChild(toolBlock);
+  el.appendChild(header);
+  el.appendChild(body);
+}
+
+function renderAssistantResponse(el, content) {
+  var header = document.createElement('div');
+  header.className = 'msg-header';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar assistant';
+  avatar.textContent = '●';
+  avatar.style.color = '#D4A574';
+  avatar.style.fontSize = '16px';
+  var name = document.createElement('span');
+  name.className = 'msg-name';
+  name.textContent = 'Claude';
+  header.appendChild(avatar);
+  header.appendChild(name);
+
+  var body = document.createElement('div');
+  body.className = 'msg-body';
+  // Content from scenarios is trusted static HTML defined in scenarios.js
+  // This is a demo with no user-generated content — all data is hardcoded
+  body.innerHTML = content; // eslint-disable-line -- static demo content only
+
+  el.appendChild(header);
+  el.appendChild(body);
+}
+
+// --- Inspector Updates ---
+
+function updateInspector() {
+  if (!currentScenario || visibleStepIndex < 0) return;
+  var step = currentScenario._flatSteps[visibleStepIndex];
+
+  if (step.type === 'thinking') {
+    thinkingSection.style.display = 'block';
+    thinkingBlock.textContent = step.content;
+  }
+
+  if (step.type === 'tool') {
+    var empty = toolsTimeline.querySelector('.timeline-empty');
+    if (empty) empty.remove();
+
+    var item = document.createElement('div');
+    item.className = 'timeline-item';
+
+    var itemName = document.createElement('div');
+    itemName.className = 'timeline-item-name';
+    itemName.textContent = step.name + '()';
+
+    var itemDetail = document.createElement('div');
+    itemDetail.className = 'timeline-item-detail';
+    itemDetail.textContent = step.params.substring(0, 50).trim() + '...';
+
+    var itemTime = document.createElement('div');
+    itemTime.className = 'timeline-item-time';
+    itemTime.textContent = 'Step ' + (visibleStepIndex + 1);
+
+    item.appendChild(itemName);
+    item.appendChild(itemDetail);
+    item.appendChild(itemTime);
+    toolsTimeline.appendChild(item);
+
+    if (toolsTimeline.children.length === 1) {
+      switchInspectorTab('tools');
+    }
+  }
+}
+
+function switchInspectorTab(tab) {
+  document.querySelectorAll('.inspector-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.getElementById('promptPane').classList.toggle('active', tab === 'prompt');
+  document.getElementById('contextPane').classList.toggle('active', tab === 'context');
+  document.getElementById('toolsPane').classList.toggle('active', tab === 'tools');
 }
