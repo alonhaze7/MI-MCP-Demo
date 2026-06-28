@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MI Data Pipelines — MCP Interactive Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect width="24" height="24" rx="6" fill="#6B4FBB"/>
+            <path d="M7 8h10M7 12h7M7 16h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="logo-text">Claude</span>
+        </div>
+        <button class="new-chat-btn">+ New Chat</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Use Cases</div>
+        <nav class="scenario-list">
+          <button class="scenario-btn active" data-scenario="discovery">
+            <span class="scenario-icon">🔍</span>
+            <span class="scenario-label">Discovery & Fix</span>
+          </button>
+          <button class="scenario-btn" data-scenario="connector">
+            <span class="scenario-icon">🔗</span>
+            <span class="scenario-label">Set Up Connector</span>
+          </button>
+          <button class="scenario-btn" data-scenario="orphans">
+            <span class="scenario-icon">👻</span>
+            <span class="scenario-label">Find Orphans</span>
+          </button>
+          <button class="scenario-btn" data-scenario="reprocess">
+            <span class="scenario-icon">🔄</span>
+            <span class="scenario-label">Reprocess Data</span>
+          </button>
+          <button class="scenario-btn" data-scenario="backfill">
+            <span class="scenario-icon">📥</span>
+            <span class="scenario-label">Backfill History</span>
+          </button>
+          <button class="scenario-btn" data-scenario="prevention">
+            <span class="scenario-icon">🛡️</span>
+            <span class="scenario-label">Break Prevention</span>
+          </button>
+          <button class="scenario-btn" data-scenario="duplicates">
+            <span class="scenario-icon">⚠️</span>
+            <span class="scenario-label">Duplicate Detection</span>
+          </button>
+        </nav>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">MCP Tools Used</div>
+        <div class="tools-panel" id="toolsPanel">
+          <div class="tool-tag">Select a use case</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="chat-area">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <h1 class="chat-title">MI Data Pipelines Assistant</h1>
+          <span class="model-badge">Claude + MCP</span>
+        </div>
+        <div class="chat-header-right">
+          <span class="connection-status">
+            <span class="status-dot"></span>
+            MCP Connected — 50 tools
+          </span>
+        </div>
+      </div>
+
+      <div class="messages-container" id="messagesContainer">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="12" fill="#6B4FBB" opacity="0.1"/>
+              <path d="M14 16h20M14 24h14M14 32h20" stroke="#6B4FBB" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>MI Data Pipelines MCP Demo</h2>
+          <p>Experience how an AI agent manages data pipelines end-to-end using natural language. Select a use case from the sidebar or type a request below.</p>
+          <div class="welcome-cards">
+            <button class="welcome-card" data-scenario="discovery">
+              <span class="card-icon">🔍</span>
+              <span class="card-title">Find & fix a data issue</span>
+              <span class="card-desc">Detect why spend dropped to zero</span>
+            </button>
+            <button class="welcome-card" data-scenario="connector">
+              <span class="card-icon">🔗</span>
+              <span class="card-title">Connect a new source</span>
+              <span class="card-desc">Set up LinkedIn Ads in minutes</span>
+            </button>
+            <button class="welcome-card" data-scenario="prevention">
+              <span class="card-icon">🛡️</span>
+              <span class="card-title">Prevent upcoming breaks</span>
+              <span class="card-desc">Proactive risk detection</span>
+            </button>
+            <button class="welcome-card" data-scenario="duplicates">
+              <span class="card-icon">⚠️</span>
+              <span class="card-title">Detect double-counting</span>
+              <span class="card-desc">Find silent duplication</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="userInput" placeholder="Ask about your data pipelines..." rows="1"></textarea>
+          <button class="send-btn" id="sendBtn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M3 10h14M12 5l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span class="disclaimer">Interactive demo — simulated responses showing MCP tool orchestration</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Panel (Tool Execution) -->
+    <aside class="right-panel" id="rightPanel">
+      <div class="panel-header">
+        <h3>Tool Execution Log</h3>
+        <button class="panel-close" id="panelClose">×</button>
+      </div>
+      <div class="panel-content" id="panelContent">
+        <div class="panel-empty">
+          <p>Tool calls will appear here as the agent works through the scenario.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="scenarios.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
